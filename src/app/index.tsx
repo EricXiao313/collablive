@@ -1,98 +1,337 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { useTrailProgress } from '../hooks/use-trail-progress';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+const STOP_IDS = ['great-court', 'library', 'lakes'];
 
 export default function HomeScreen() {
+  const {
+    progressByMode,
+    loaded,
+    error,
+    retryLoading,
+  } = useTrailProgress('demo', STOP_IDS);
+
+  const demoCount = progressByMode.demo.length;
+  const liveCount = progressByMode.live.length;
+  const totalStops = STOP_IDS.length;
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <SafeAreaView style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.brand}>CollabLive</Text>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+        <Text style={styles.subtitle}>
+          Learn beyond the classroom.
+        </Text>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+        <View style={styles.hero}>
+          <Text style={styles.label}>PRESENTATION TRAIL</Text>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+          <Text style={styles.heroTitle}>
+            Turn a walk into a lesson.
+          </Text>
+
+          <Text style={styles.heroText}>
+            Explore campus, discover learning stops and unlock
+            slides when you arrive.
+          </Text>
+        </View>
+
+        <Text style={styles.sectionTitle}>Your progress</Text>
+
+        <View style={styles.card}>
+          {loaded ? (
+            <>
+              <View style={styles.progressRow}>
+                <View style={styles.progressDetails}>
+                  <Text style={styles.progressTitle}>
+                    Live trail
+                  </Text>
+
+                  <Text style={styles.description}>
+                    {liveCount === totalStops
+                      ? 'Completed'
+                      : liveCount === 0
+                        ? 'Ready for your first visit'
+                        : 'Keep exploring'}
+                  </Text>
+                </View>
+
+                <Text style={styles.progressCount}>
+                  {liveCount} / {totalStops}
+                </Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.progressRow}>
+                <View style={styles.progressDetails}>
+                  <Text style={styles.progressTitle}>
+                    Simulation
+                  </Text>
+
+                  <Text style={styles.description}>
+                    {demoCount === totalStops
+                      ? 'Completed'
+                      : demoCount === 0
+                        ? 'Try the trail from anywhere'
+                        : 'Continue your practice trail'}
+                  </Text>
+                </View>
+
+                <Text style={styles.progressCount}>
+                  {demoCount} / {totalStops}
+                </Text>
+              </View>
+
+              <Text style={styles.note}>
+                Practice and real visits have separate progress.
+                Completed slides stay available for review.
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.description}>
+                {error
+                  ? 'Your saved progress could not be loaded.'
+                  : 'Loading your progress...'}
+              </Text>
+
+              {error ? (
+                <Pressable
+                  accessibilityRole="button"
+                  style={styles.secondaryButton}
+                  onPress={retryLoading}
+                >
+                  <Text style={styles.secondaryButtonText}>
+                    Retry loading
+                  </Text>
+                </Pressable>
+              ) : null}
+            </>
+          )}
+        </View>
+
+        <Text style={styles.sectionTitle}>
+          Choose your trail
+        </Text>
+
+        <View style={styles.card}>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>
+              UQ ST LUCIA
+            </Text>
+          </View>
+
+          <Text style={styles.cardTitle}>
+            Campus Discovery
+          </Text>
+
+          <Text style={styles.description}>
+            Explore three learning stops inspired by campus
+            spaces. Read each slide, try its activity and mark
+            the stop as completed.
+          </Text>
+
+          <Text style={styles.metadata}>
+            3 learning stops · 80 m unlock radius
+          </Text>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/trail')}
+            style={({ pressed }) => [
+              styles.button,
+              pressed && styles.buttonPressed,
+            ]}
+          >
+            <Text style={styles.buttonText}>
+              View trail
+            </Text>
+          </Pressable>
+        </View>
+
+        <Text style={styles.sectionTitle}>
+          How it works
+        </Text>
+
+        <View style={styles.card}>
+          <Text style={styles.step}>
+            1. Open the trail and explore the map.
+          </Text>
+
+          <Text style={styles.step}>
+            2. Use your location or try simulation mode.
+          </Text>
+
+          <Text style={styles.step}>
+            3. Get within 80 metres to read a new slide.
+          </Text>
+
+          <Text style={styles.step}>
+            4. Complete its activity and save your progress.
+          </Text>
+        </View>
+
+        <Text style={styles.note}>
+          Current stops use approximate demo positions.
+          Simulation lets you try every stop without travelling.
+        </Text>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    justifyContent: 'center',
+    backgroundColor: '#F5F7FB',
+  },
+  content: {
+    padding: 24,
+    paddingBottom: 40,
+    gap: 12,
+  },
+  brand: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#17243B',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#627087',
+    marginBottom: 12,
+  },
+  hero: {
+    backgroundColor: '#183D75',
+    borderRadius: 24,
+    padding: 24,
+    gap: 14,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    color: '#BCD5FF',
+  },
+  heroTitle: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  heroText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#DFE9FA',
+  },
+  sectionTitle: {
+    fontSize: 21,
+    fontWeight: '700',
+    color: '#17243B',
+    marginTop: 16,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 22,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  progressRow: {
     flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
     alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  progressDetails: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    gap: 5,
   },
-  title: {
-    textAlign: 'center',
+  progressTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#17243B',
   },
-  code: {
-    textTransform: 'uppercase',
+  progressCount: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#2456A6',
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  divider: {
+    height: 1,
+    backgroundColor: '#E2E8F0',
+  },
+  badge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#EAF1FF',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  badgeText: {
+    color: '#2456A6',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  cardTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#17243B',
+  },
+  description: {
+    fontSize: 15,
+    lineHeight: 23,
+    color: '#627087',
+  },
+  metadata: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2456A6',
+  },
+  button: {
+    backgroundColor: '#2456A6',
+    padding: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  buttonPressed: {
+    opacity: 0.75,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  secondaryButton: {
+    backgroundColor: '#EAF1FF',
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  secondaryButtonText: {
+    color: '#2456A6',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  step: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#43516A',
+  },
+  note: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#627087',
   },
 });
