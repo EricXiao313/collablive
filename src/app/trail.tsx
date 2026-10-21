@@ -21,14 +21,14 @@ type Coordinate = {
 
 const UNLOCK_RADIUS = 80;
 
-// Demo positions: verify exact locations before real-world testing.
+// Reference positions: verify exact locations before real-world testing.
 const stops = [
     {
         id: 'great-court',
         title: 'Great Court',
         coordinate: {
             latitude: -27.497508,
-      longitude: 153.013353,
+            longitude: 153.013353,
         },
         slideTitle: 'A place to connect',
         content:
@@ -39,7 +39,7 @@ const stops = [
         title: 'Duhig Tower',
         coordinate: {
             latitude: -27.4966183,
-      longitude: 153.0143484,
+            longitude: 153.0143484,
         },
         slideTitle: 'Learning beyond lectures',
         content:
@@ -50,7 +50,7 @@ const stops = [
         title: 'UQ Lakes',
         coordinate: {
             latitude: -27.49866,
-      longitude: 153.01621,
+            longitude: 153.01621,
         },
         slideTitle: 'Learning from our surroundings',
         content:
@@ -104,8 +104,7 @@ export default function TrailScreen() {
     const position =
         mode === 'demo' ? demoPosition : location.position;
 
-    const locationReady =
-        mode === 'demo' || location.canUnlock;
+    const locationReady = mode === 'demo' || location.canUnlock;
 
     const {
         completedIds,
@@ -118,6 +117,7 @@ export default function TrailScreen() {
     } = useTrailProgress(mode, STOP_IDS);
 
     const completedCount = completedIds.length;
+
     const progressPercent = Math.round(
         (completedCount / stops.length) * 100
     );
@@ -230,7 +230,9 @@ export default function TrailScreen() {
                     </Text>
 
                     {saving ? (
-                        <Text style={styles.description}>Saving progress...</Text>
+                        <Text style={styles.description}>
+                            Saving progress...
+                        </Text>
                     ) : null}
 
                     {error ? (
@@ -243,7 +245,9 @@ export default function TrailScreen() {
                             style={styles.smallButton}
                             onPress={retryLoading}
                         >
-                            <Text style={styles.smallButtonText}>Retry loading</Text>
+                            <Text style={styles.smallButtonText}>
+                                Retry loading
+                            </Text>
                         </Pressable>
                     ) : null}
 
@@ -258,7 +262,7 @@ export default function TrailScreen() {
                         onPress={confirmReset}
                     >
                         <Text style={styles.smallButtonText}>
-                            Reset this mode's progress
+                            {"Reset this mode's progress"}
                         </Text>
                     </Pressable>
                 </View>
@@ -477,6 +481,7 @@ export default function TrailScreen() {
                                 <Text style={styles.stopTitle}>
                                     {index + 1}. {stop.title}
                                 </Text>
+
                                 <Text style={styles.description}>
                                     Tap to locate on map
                                 </Text>
@@ -485,9 +490,7 @@ export default function TrailScreen() {
                             <Text style={styles.distance}>
                                 {distance === null
                                     ? 'Distance unavailable'
-                                    : `${formatDistance(
-                                        distance
-                                    )} away · estimated straight-line distance`}
+                                    : `${formatDistance(distance)} away · estimated straight-line distance`}
                             </Text>
 
                             <Text

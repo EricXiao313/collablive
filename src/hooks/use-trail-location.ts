@@ -19,7 +19,7 @@ export function useTrailLocation(enabled: boolean) {
     const [sample, setSample] = useState<PositionSample | null>(null);
     const [phase, setPhase] = useState<Phase>('waiting');
     const [timedOut, setTimedOut] = useState(false);
-    const [now, setNow] = useState(Date.now());
+    const [now, setNow] = useState(() => Date.now());
     const [attempt, setAttempt] = useState(0);
 
     const [foreground, setForeground] = useState(
@@ -86,7 +86,6 @@ export function useTrailLocation(enabled: boolean) {
                             if (!active) return;
 
                             clearTimeout(timeout);
-
                             setNow(Date.now());
 
                             setSample({
@@ -153,7 +152,8 @@ export function useTrailLocation(enabled: boolean) {
 
     if (enabled) {
         if (!foreground) {
-            message = 'Location is paused while the app is in the background.';
+            message =
+                'Location is paused while the app is in the background.';
         } else if (phase === 'denied') {
             message =
                 'Location permission is denied. Open Settings to allow location for Expo Go, or use simulation.';
