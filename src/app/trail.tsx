@@ -1,7 +1,7 @@
-import * as Location from 'expo-location';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
     Alert,
+    Linking,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -11,6 +11,7 @@ import {
 import MapView, { Circle, Marker } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useTrailLocation } from '../hooks/use-trail-location';
 import { useTrailProgress } from '../hooks/use-trail-progress';
 
 type Coordinate = {
@@ -26,8 +27,8 @@ const stops = [
         id: 'great-court',
         title: 'Great Court',
         coordinate: {
-            latitude: -27.4975,
-            longitude: 153.0137,
+            latitude: -27.497508,
+      longitude: 153.013353,
         },
         slideTitle: 'A place to connect',
         content:
@@ -37,8 +38,8 @@ const stops = [
         id: 'library',
         title: 'Duhig Tower',
         coordinate: {
-            latitude: -27.4959,
-            longitude: 153.0154,
+            latitude: -27.4966183,
+      longitude: 153.0143484,
         },
         slideTitle: 'Learning beyond lectures',
         content:
@@ -48,8 +49,8 @@ const stops = [
         id: 'lakes',
         title: 'UQ Lakes',
         coordinate: {
-            latitude: -27.5005,
-            longitude: 153.0176,
+            latitude: -27.49866,
+      longitude: 153.01621,
         },
         slideTitle: 'Learning from our surroundings',
         content:
@@ -92,19 +93,19 @@ export default function TrailScreen() {
     const mapRef = useRef<MapView>(null);
 
     const [mode, setMode] = useState<'demo' | 'live'>('demo');
-
     const [demoPosition, setDemoPosition] =
         useState<Coordinate>(outsidePosition);
 
-    const [livePosition, setLivePosition] =
-        useState<Coordinate | null>(null);
-
-    const [locationMessage, setLocationMessage] = useState('');
-    const [attempt, setAttempt] = useState(0);
     const [selectedId, setSelectedId] = useState(stops[0].id);
     const [openedId, setOpenedId] = useState<string | null>(null);
 
-    const position = mode === 'demo' ? demoPosition : livePosition;
+    const location = useTrailLocation(mode === 'live');
+
+    const position =
+        mode === 'demo' ? demoPosition : location.position;
+
+    const locationReady =
+        mode === 'demo' || location.canUnlock;
 
     const {
         completedIds,
@@ -117,95 +118,9 @@ export default function TrailScreen() {
     } = useTrailProgress(mode, STOP_IDS);
 
     const completedCount = completedIds.length;
-
     const progressPercent = Math.round(
         (completedCount / stops.length) * 100
     );
-
-    useEffect(() => {
-        if (mode !== 'live') return;
-
-        let active = true;
-        let subscription: Location.LocationSubscription | undefined;
-
-        async function startLocation() {
-            setLocationMessage('Requesting location permission...');
-
-            try {
-                const permission =
-                    await Location.requestForegroundPermissionsAsync();
-
-                if (!active) return;
-
-                if (permission.status !== 'granted') {
-                    setLocationMessage(
-                        'Location permission was denied. Use simulation, or enable location for Expo Go in iPhone Settings and retry.'
-                    );
-                    return;
-                }
-
-                const enabled = await Location.hasServicesEnabledAsync();
-
-                if (!active) return;
-
-                if (!enabled) {
-                    setLocationMessage(
-                        'Location services are off. Enable them in Settings, or use simulation.'
-                    );
-                    return;
-                }
-
-                setLocationMessage(
-                    'Waiting for a GPS position. You can use simulation if no position arrives.'
-                );
-
-                const watcher = await Location.watchPositionAsync(
-                    {
-                        accuracy: Location.Accuracy.High,
-                        distanceInterval: 5,
-                        timeInterval: 3000,
-                    },
-                    (result) => {
-                        if (!active) return;
-
-                        setLivePosition({
-                            latitude: result.coords.latitude,
-                            longitude: result.coords.longitude,
-                        });
-
-                        const accuracy = result.coords.accuracy;
-
-                        setLocationMessage(
-                            accuracy == null
-                                ? 'Live location is active.'
-                                : `Live location active. Estimated GPS accuracy: ${Math.round(
-                                    accuracy
-                                )} m.`
-                        );
-                    }
-                );
-
-                if (active) {
-                    subscription = watcher;
-                } else {
-                    watcher.remove();
-                }
-            } catch {
-                if (active) {
-                    setLocationMessage(
-                        'Unable to read your location. Retry or use simulation.'
-                    );
-                }
-            }
-        }
-
-        void startLocation();
-
-        return () => {
-            active = false;
-            subscription?.remove();
-        };
-    }, [mode, attempt]);
 
     function selectStop(stop: Stop) {
         setSelectedId(stop.id);
@@ -237,9 +152,12 @@ export default function TrailScreen() {
 
     function startLiveLocation() {
         setOpenedId(null);
-        setLivePosition(null);
-        setMode('live');
-        setAttempt((previous) => previous + 1);
+
+        if (mode === 'live') {
+            location.retry();
+        } else {
+            setMode('live');
+        }
     }
 
     function simulatePosition(coordinate: Coordinate) {
@@ -254,10 +172,7 @@ export default function TrailScreen() {
             `This clears only your ${mode === 'demo' ? 'simulation' : 'live trail'
             } progress.`,
             [
-                {
-                    text: 'Cancel',
-                    style: 'cancel',
-                },
+                { text: 'Cancel', style: 'cancel' },
                 {
                     text: 'Reset',
                     style: 'destructive',
@@ -270,14 +185,23 @@ export default function TrailScreen() {
         );
     }
 
+    async function openSettings() {
+        try {
+            await Linking.openSettings();
+        } catch {
+            Alert.alert(
+                'Unable to open Settings',
+                'Open iPhone Settings manually and check the location permission for Expo Go.'
+            );
+        }
+    }
+
     return (
         <SafeAreaView style={styles.screen} edges={['bottom']}>
             <ScrollView contentContainerStyle={styles.content}>
                 <Text style={styles.label}>CAMPUS DISCOVERY</Text>
-
                 <Text style={styles.title}>Explore your trail</Text>
 
-                {/* Saved learning progress */}
                 <View style={styles.panel}>
                     <Text style={styles.panelTitle}>
                         {mode === 'demo'
@@ -325,9 +249,6 @@ export default function TrailScreen() {
 
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityState={{
-                            disabled: !loaded || saving || completedCount === 0,
-                        }}
                         disabled={!loaded || saving || completedCount === 0}
                         style={[
                             styles.smallButton,
@@ -342,16 +263,16 @@ export default function TrailScreen() {
                     </Pressable>
                 </View>
 
-                {/* Location mode and simulation controls */}
                 <View style={styles.panel}>
                     <Text style={styles.panelTitle}>
                         {mode === 'demo' ? 'Simulation mode' : 'Live GPS mode'}
                     </Text>
 
                     <Text style={styles.description}>
-                        Location is used to calculate your distance from each stop
-                        and open its slide within {UNLOCK_RADIUS} metres. You can
-                        also test using simulated positions.
+                        Your location is used while this screen is open to find
+                        nearby learning stops. It is not saved or uploaded.
+                        New slides open within {UNLOCK_RADIUS} metres when the
+                        location estimate is fresh and accurate enough.
                     </Text>
 
                     <Pressable
@@ -367,7 +288,27 @@ export default function TrailScreen() {
                     </Pressable>
 
                     {mode === 'live' ? (
-                        <Text style={styles.description}>{locationMessage}</Text>
+                        <>
+                            <Text
+                                style={
+                                    location.canUnlock
+                                        ? styles.available
+                                        : styles.description
+                                }
+                            >
+                                {location.message}
+                            </Text>
+
+                            <Pressable
+                                accessibilityRole="button"
+                                style={styles.smallButton}
+                                onPress={openSettings}
+                            >
+                                <Text style={styles.smallButtonText}>
+                                    Open location settings
+                                </Text>
+                            </Pressable>
+                        </>
                     ) : (
                         <Text style={styles.description}>
                             Your displayed position is simulated, not your real GPS.
@@ -411,7 +352,6 @@ export default function TrailScreen() {
                     </View>
                 </View>
 
-                {/* Map and unlock areas */}
                 <View style={styles.mapContainer}>
                     <MapView
                         ref={mapRef}
@@ -453,7 +393,7 @@ export default function TrailScreen() {
                                 title={
                                     mode === 'demo'
                                         ? 'Simulated position'
-                                        : 'Your GPS position'
+                                        : 'Your GPS estimate'
                                 }
                                 pinColor="#14804A"
                             />
@@ -474,7 +414,6 @@ export default function TrailScreen() {
 
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityState={{ disabled: !position }}
                         disabled={!position}
                         style={[
                             styles.smallButton,
@@ -496,7 +435,6 @@ export default function TrailScreen() {
                     </Pressable>
                 </View>
 
-                {/* Learning stops */}
                 {stops.map((stop, index) => {
                     const distance = position
                         ? getDistance(position, stop.coordinate)
@@ -506,10 +444,22 @@ export default function TrailScreen() {
                         loaded && completedIds.includes(stop.id);
 
                     const isNearby =
-                        distance !== null && distance <= UNLOCK_RADIUS;
+                        locationReady &&
+                        distance !== null &&
+                        distance <= UNLOCK_RADIUS;
 
                     const canRead = isNearby || isCompleted;
                     const isOpen = openedId === stop.id && canRead;
+
+                    let status = 'Locked — move within 80 m to read.';
+
+                    if (isCompleted) {
+                        status = 'Completed — available for review.';
+                    } else if (!locationReady) {
+                        status = 'Locked — waiting for a reliable GPS position.';
+                    } else if (isNearby) {
+                        status = 'Available — you are within 80 m.';
+                    }
 
                     return (
                         <View
@@ -527,7 +477,6 @@ export default function TrailScreen() {
                                 <Text style={styles.stopTitle}>
                                     {index + 1}. {stop.title}
                                 </Text>
-
                                 <Text style={styles.description}>
                                     Tap to locate on map
                                 </Text>
@@ -538,7 +487,7 @@ export default function TrailScreen() {
                                     ? 'Distance unavailable'
                                     : `${formatDistance(
                                         distance
-                                    )} away · straight-line distance`}
+                                    )} away · estimated straight-line distance`}
                             </Text>
 
                             <Text
@@ -546,11 +495,7 @@ export default function TrailScreen() {
                                     canRead ? styles.available : styles.description
                                 }
                             >
-                                {isCompleted
-                                    ? 'Completed — available for review.'
-                                    : isNearby
-                                        ? 'Available — you are within 80 m.'
-                                        : 'Locked — move within 80 m to read.'}
+                                {status}
                             </Text>
 
                             <Pressable
@@ -591,9 +536,6 @@ export default function TrailScreen() {
                                     ) : (
                                         <Pressable
                                             accessibilityRole="button"
-                                            accessibilityState={{
-                                                disabled: !loaded || saving || !isNearby,
-                                            }}
                                             disabled={!loaded || saving || !isNearby}
                                             style={[
                                                 styles.button,
