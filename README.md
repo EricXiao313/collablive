@@ -42,8 +42,8 @@ The application combines interactive maps with location-triggered content. The m
 | Network detection | @react-native-community/netinfo |
 | Expo SDK | 57 |
 | Expo package version | ~57.0.30 |
-| Test device | Physical iPhone: [ENTER IPHONE MODEL] |
-| iOS version | [ENTER IOS VERSION] |
+| Test device | Physical iPhone: [16 PRO MAX] |
+| iOS version | [IOS 27.0] |
 | Test application | Expo Go |
 
 This is a single-user experience. No login, user account, second device or course API setup is required.
